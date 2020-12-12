@@ -3,6 +3,9 @@ from tensorflow.keras.layers import Dense
 import pandas as pd
 from functions import *
 
+# *********************************************************************************
+# READMEs:
+
 # READ ME:(5 dec.)
 # for unknown reason(as already happened in october)
 # the csv file although have the same dimensions
@@ -15,6 +18,9 @@ from functions import *
 # so I think it is better to leave this implementation
 # since it has some particularities, such as
 # a cell in the csv is an array. So lets continue with tf.dataset
+
+# end of REAME's
+# *********************************************************************************
 
 # call this method only when you want to recreate the csv files
 # else skip, because it is time penalty, more than 10 min.
