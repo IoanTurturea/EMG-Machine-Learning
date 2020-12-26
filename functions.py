@@ -8,8 +8,9 @@ import tensorflow as tf
 # located in directory: "/home/ioan/Desktop/Database/"
 # makes a data augmentation by overlapping
 # with a window of size 50%
-# returns 3 tensorflow.data.Dataset pair objects
-def prepare_database():
+# returns 3 tensorflow.data.Dataset pair objects:
+# train_dataset, val_dataset, test_dataset
+def prepare_train_val_test():
     # data base read and format:
     x_train, y_train = [], []
     x_test, y_test = [], []
@@ -72,8 +73,8 @@ def prepare_database():
     ytrain = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_train))  # .map(lambda z: tf.one_hot(z, 13))
     train_dataset = tf.data.Dataset.zip((xtrain, ytrain)).repeat().batch(16)
 
-    xval = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_test))
-    yval = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_test))  # .map(lambda z: tf.one_hot(z, 13))
+    xval = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_val))
+    yval = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_val))  # .map(lambda z: tf.one_hot(z, 13))
     val_dataset = tf.data.Dataset.zip((xval, yval)).repeat().batch(16)
 
     xtest = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_test))
@@ -81,6 +82,84 @@ def prepare_database():
     test_dataset = tf.data.Dataset.zip((xtest, ytest)).repeat().batch(16)
 
     return train_dataset, val_dataset, test_dataset
+
+
+# extracts data from files of database
+# located in directory: "/home/ioan/Desktop/Database/"
+# makes a data augmentation by overlapping
+# with a window of size 50%
+# returns 6 tensorflow.data.Dataset objects:
+# x_train, y_train, x_val, y_val, x_test, y_test
+# Obs: val is the same with dev
+def prepare_xy_train_val_test():
+    # data base read and format:
+    x_train, y_train = [], []
+    x_test, y_test = [], []
+    x_val, y_val = [], []
+
+    path = "/home/ioan/Desktop/Database/"
+
+    # window size, choose it to be 50 samples
+    # because 50 & 200Hz(sampling rate) = 250ms
+    # a sample = one line from a (*,8) matrix
+    N = 50
+    overlap = 25
+
+    # there are 3 folders in Database: Train, Val, Test
+    folders = os.listdir(path)
+
+    # iterate in folders
+    for folder in folders:
+        data = os.path.join(path, folder)
+        files = os.listdir(data)
+
+        # iterate files in a folder
+        for file in files:
+            filepath = data + "/" + str(file)
+            signal = np.loadtxt(filepath)
+            label = (str(file))[5:7]
+            # here was the problem:
+            # returns size = rows*columns. Is this desired?
+            # length = signal.size
+            # instead use "len" attribute
+            # N - overlap = step
+            for i in range(0, len(signal) - N + 1, N - overlap):
+                window = signal[i: (i + N)]
+
+                if folder == 'Train':
+                    x_train.append(window)
+                    y_train.append(label)
+                elif folder == 'Test':
+                    x_test.append(window)
+                    y_test.append(label)
+                elif folder == 'Val':
+                    x_val.append(window)
+                    y_val.append(label)
+
+    # old implementation (before dec. 4)
+    # train_dataset = tf.data.Dataset.from_tensor_slices((np.asanyarray(x_train), np.asanyarray(y_train)))
+    # val_dataset = tf.data.Dataset.from_tensor_slices((np.asanyarray(x_val), np.asanyarray(y_val)))
+    # test_dataset = tf.data.Dataset.from_tensor_slices((np.asanyarray(x_test), np.asanyarray(y_test)))
+
+    # 4 dec. update:
+    # left away the old return implementation
+    # because it looks easier to make
+    # one_hot encoding and batch from this function
+    # rather than breaking the already zipped dataset object in
+    # data and label at the function call
+    # Be aware of the one_hot and batch size!
+    # The lambda expression can not be compiled!
+
+    x_train = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_train))
+    y_train = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_train))
+
+    x_val = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_val))
+    y_val = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_val))
+
+    x_test = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_test))
+    y_test = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_test))
+
+    return x_train, y_train, x_val, y_val, x_test, y_test
 
 
 # NN architecture, basic TF API
@@ -118,7 +197,7 @@ def nn_model(in_data):
 # for x, y in val_dataset:
 #     print(x, y)
 
-
+# ***************************************************************************
 # extracts data from files of database
 # located in directory: "/home/ioan/Desktop/Database/"
 # makes a data augmentation by overlapping
@@ -200,7 +279,7 @@ def prepare_database_toCSV():
 # located in directory: "/home/ioan/Desktop/Database/"
 # makes a data augmentation by overlapping
 # with a window of size 50%
-# returns none, but creates csv files on Desktop
+# returns none, but creates text files on Desktop
 def prepare_database_totxt():
     # data base read and format:
     x_train, y_train = [], []
