@@ -1,82 +1,33 @@
-from test import *
-import tensorflow as tf
-from tensorflow.keras import Sequential
-from tensorflow.keras.layers import Dense
+import numpy as np
+import h5py
+from tensorflow.python.keras.callbacks import ModelCheckpoint
 
-# READ ME:
-# solve the iterator problem
-# but I do know the concepts behind tf API
-# for iterator
-# that why I prefered read from CSV method
-# but we have that "cardinality error" - see main3.py
-# must solve iterator problem to move on
-# with this implementation
+from functions import *
+from tensorflow.python.keras import Input
+from tensorflow.python.keras.layers import Dropout, Dense
+from tensorflow.python.keras.models import Model, load_model, save_model
 
-epochs = 10
+x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test()
+train_dataset = tf.data.Dataset.zip((x_train, y_train))
 
-# import already prepared database
-# retuns 3 tf.data.Dataset objects
-train_dataset, val_dataset, test_dataset = prepare_database()
+input = Input((64,), name='input')
+hidden = Dense(64, activation='relu', name='hidden_1')(input)
+dropout = Dropout(0.2, name='dropout_1')(hidden)
+hidden = Dense(32, activation='relu', name='hidden_2')(dropout)
+dropout = Dropout(0.2, name='dropout_2')(hidden)
+hidden = Dense(32, activation='relu', name='hidden_3')(dropout)
+dropout = Dropout(0.2, name='dropout_3')(hidden)
+output = Dense(7, activation='softmax', name='output')(dropout)
+model = Model(inputs=input, outputs=output)
+model = Model()
+model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-# create general iterator
-# iterator = tf.data.Iterator.from_structure(train_dataset.output_types, train_dataset.output_shapes)
-iterator = train_dataset
-next_element = iterator.get_next()
-
-# make datasets that we can initialize separately,
-# but using the same structure via the common iterator
-training_init_op = iterator.make_initializer(train_dataset)
-validation_init_op = iterator.make_initializer(val_dataset)
-test_init_op = iterator.make_initializer(test_dataset)
-
-
-# create the neural network model
-logits = nn_model(next_element[0])
-
-
-# add the optimizer and loss
-loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits_v2(labels=next_element[1], logits=logits))
-optimizer = tf.train.AdamOptimizer().minimize(loss)
-# get accuracy
-prediction = tf.argmax(logits, 1)
-equality = tf.equal(prediction, tf.argmax(next_element[1], 1))
-accuracy = tf.reduce_mean(tf.cast(equality, tf.float32))
-init_op = tf.global_variables_initializer()
-
-
-# run the training
-with tf.Session() as sess:
-    sess.run(init_op)
-    sess.run(training_init_op)
-    for i in range(epochs):
-        l, _, acc = sess.run([loss, optimizer, accuracy])
-        if i % 50 == 0:
-            print("Epoch: {}, loss: {:.3f}, training accuracy: {:.2f}%".format(i, l, acc * 100))
-    # now setup the validation run
-    valid_iters = 100
-    # re-initialize the iterator, but this time with validation data
-    sess.run(validation_init_op)
-    avg_acc = 0
-    for i in range(valid_iters):
-        acc = sess.run([accuracy])
-        avg_acc += acc[0]
-    print("Average validation set accuracy over {} iterations is {:.2f}%"
-          .format(valid_iters, (avg_acc / valid_iters) * 100))
-
-
-
-
-# # NN architecture:
-# classifier = Sequential()
-#
-# classifier.add(Dense(units=16, activation='relu', input_dim=30))
-# classifier.add(Dense(units=8, activation='relu'))
-# classifier.add(Dense(units=6, activation='relu'))
-# classifier.add(Dense(units=1, activation='sigmoid'))
-#
-# # Optimizer and Loss function:
-# classifier.compile(optimizer='adam', loss='binary_crossentropy')
-#
-# # Fitting:
-# classifier.fit(x_train, y_train, batch_size=1, epochs=50)
-# print(classifier.predict(x_train).round())
+#model = load_model('1.h5')
+accuracy = model.fit(train_dataset, callbacks=[ModelCheckpoint('1.h5', save_best_only=True, verbose=1)],
+                     batch_size=64, epochs=2048, verbose=2, validation_data=(x_dev, y_dev))
+#print(accuracy)
+#model.save('firstmodel256_128b.h5')
+#model.save('1.h5')
+save_model(model, '1', saveformat='h5')
+#y_predict = model.predict(x_dev)
+#label_predict = np.argmax(y_predict, axis=1)
