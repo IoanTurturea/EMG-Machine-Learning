@@ -1,7 +1,6 @@
 import numpy as np
 import h5py
 from tensorflow.python.keras.callbacks import ModelCheckpoint
-
 from functions import *
 from tensorflow.python.keras import Input
 from tensorflow.python.keras.layers import Dropout, Dense
@@ -28,6 +27,6 @@ accuracy = model.fit(train_dataset, callbacks=[ModelCheckpoint('1.h5', save_best
 #print(accuracy)
 #model.save('firstmodel256_128b.h5')
 #model.save('1.h5')
-save_model(model, '1', saveformat='h5')
+#save_model(model, '1', saveformat='h5')
 #y_predict = model.predict(x_dev)
 #label_predict = np.argmax(y_predict, axis=1)
