@@ -6,8 +6,8 @@ from tensorflow.python.keras import Input
 from tensorflow.python.keras.layers import Dropout, Dense
 from tensorflow.python.keras.models import Model, load_model, save_model
 
-x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test()
-train_dataset = tf.data.Dataset.zip((x_train, y_train))
+x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test() # returns tf.data.Dataset objects
+train_dataset = tf.data.Dataset.zip((x_train, y_train)) # make a pair
 
 input = Input((64,), name='input')
 hidden = Dense(64, activation='relu', name='hidden_1')(input)
@@ -22,8 +22,11 @@ model = Model()
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
 #model = load_model('1.h5')
+
+# PROBLEM WITH THIS LINE:
 accuracy = model.fit(train_dataset, callbacks=[ModelCheckpoint('1.h5', save_best_only=True, verbose=1)],
                      batch_size=64, epochs=2048, verbose=2, validation_data=(x_dev, y_dev))
+
 #print(accuracy)
 #model.save('firstmodel256_128b.h5')
 #model.save('1.h5')
