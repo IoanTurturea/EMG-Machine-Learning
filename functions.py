@@ -10,6 +10,9 @@ import tensorflow as tf
 # with a window of size 50%
 # returns 3 tensorflow.data.Dataset pair objects:
 # train_dataset, val_dataset, test_dataset
+from tensorflow import keras
+
+
 def prepare_train_val_test():
     # data base read and format:
     x_train, y_train = [], []
@@ -117,7 +120,7 @@ def prepare_xy_train_val_test():
         for file in files:
             filepath = data + "/" + str(file)
             signal = np.loadtxt(filepath)
-            label = (str(file))[5:7]
+            label = int((str(file))[5:7])
             # here was the problem:
             # returns size = rows*columns. Is this desired?
             # length = signal.size
@@ -151,12 +154,15 @@ def prepare_xy_train_val_test():
     # The lambda expression can not be compiled!
 
     x_train = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_train))
+    y_train = keras.utils.to_categorical(y_train, 13)
     y_train = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_train))
 
     x_val = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_val))
+    y_val = keras.utils.to_categorical(y_val, 13)
     y_val = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_val))
 
     x_test = tf.data.Dataset.from_tensor_slices(np.asanyarray(x_test))
+    y_test = keras.utils.to_categorical(y_test, 13)
     y_test = tf.data.Dataset.from_tensor_slices(np.asanyarray(y_test))
 
     return x_train, y_train, x_val, y_val, x_test, y_test
@@ -203,7 +209,7 @@ def nn_model(in_data):
 # makes a data augmentation by overlapping
 # with a window of size 50%
 # returns none, but creates csv files on Desktop
-def prepare_database_toCSV():
+def write_database_toCSV():
     # data base read and format:
     x_train, y_train = [], []
     x_test, y_test = [], []
@@ -280,7 +286,7 @@ def prepare_database_toCSV():
 # makes a data augmentation by overlapping
 # with a window of size 50%
 # returns none, but creates text files on Desktop
-def prepare_database_totxt():
+def write_database_toCSV():
     # data base read and format:
     x_train, y_train = [], []
     x_test, y_test = [], []
