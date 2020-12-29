@@ -10,10 +10,10 @@ from tensorflow.python.keras.models import Model, load_model, save_model
 
 print("TF version:", tf.__version__)
 
-x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test()# returns tf.data.Dataset objects
+x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test_BETA() # returns tf.data.Dataset objects
 train_dataset = tf.data.Dataset.zip((x_train, y_train))
 
-input = Input((50, 8), name='input')
+input = Input((400, 1), name='input')
 hidden = Dense(64, activation='relu', name='hidden_1')(input)
 dropout = Dropout(0.2, name='dropout_1')(hidden)
 hidden = Dense(32, activation='relu', name='hidden_2')(dropout)
