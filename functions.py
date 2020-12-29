@@ -183,10 +183,6 @@ def prepare_xy_train_val_test_BETA():
     x_val, y_val = [], []
 
     path = "/home/ioan/Desktop/Database/"
-
-    # window size, choose it to be 50 samples
-    # because 50 & 200Hz(sampling rate) = 250ms
-    # a sample = one line from a (*,8) matrix
     N = 50
     overlap = 25
 
@@ -221,20 +217,6 @@ def prepare_xy_train_val_test_BETA():
                     x_val.append(window)
                     y_val.append(label)
 
-    # old implementation (before dec. 4)
-    # train_dataset = tf.data.Dataset.from_tensor_slices((np.asanyarray(x_train), np.asanyarray(y_train)))
-    # val_dataset = tf.data.Dataset.from_tensor_slices((np.asanyarray(x_val), np.asanyarray(y_val)))
-    # test_dataset = tf.data.Dataset.from_tensor_slices((np.asanyarray(x_test), np.asanyarray(y_test)))
-
-    # 4 dec. update:
-    # left away the old return implementation
-    # because it looks easier to make
-    # one_hot encoding and batch from this function
-    # rather than breaking the already zipped dataset object in
-    # data and label at the function call
-    # Be aware of the one_hot and batch size!
-    # The lambda expression can not be compiled!
-
     x_train = np.asanyarray(x_train)
     y_train = np.asanyarray(y_train)
     x_val = np.asanyarray(x_val)
@@ -247,6 +229,7 @@ def prepare_xy_train_val_test_BETA():
     print(x_train.shape)
 
     x_train = tf.data.Dataset.from_tensor_slices(x_train)
+    print('('+len(list(x_train)) + ', ' + tf.data.experimental.cardinality(x_train) + ')') # no shape attribute
     y_train = keras.utils.to_categorical(y_train, 13)
     y_train = tf.data.Dataset.from_tensor_slices(y_train)
 
