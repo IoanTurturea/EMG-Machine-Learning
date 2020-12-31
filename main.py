@@ -11,7 +11,7 @@ from tensorflow.python.keras.models import Model, load_model, save_model
 
 print("TF version:", tf.__version__)
 
-x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test_asnumpyarrays()  # returns tf.data.Dataset objects
+x_train, y_train, x_dev, y_dev, _, _ = prepare_xy_train_val_test_asnumpyarrays()  # returns numpy arrays
 #train_dataset = tf.data.Dataset.zip((x_train, y_train))
 #train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
 
