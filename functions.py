@@ -12,6 +12,13 @@ from tensorflow import keras
 
 path = "/home/ioan/Desktop/Database/"
 
+# extracts data from files of database
+# located in directory: "/home/ioan/Desktop/Database/"
+# makes a data augmentation by overlapping
+# with a window of size 50%
+# returns 6 tensorflow.data.Dataset objects:
+# x_train, y_train, x_val, y_val, x_test, y_test
+# Obs: val is the same with dev
 def prepare_xy_train_val_test_asnumpyarrays():
     # data base read and format:
     x_train, y_train = [], []
@@ -22,10 +29,11 @@ def prepare_xy_train_val_test_asnumpyarrays():
     # because 50 & 200Hz(sampling rate) = 250ms
     # a sample = one line from a (*,8) matrix
     N = 50
-    overlap = 25
+    overlap = 40
+    hamming = np.hamming(N*8) # did not improve accuracy :(
+    # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
 
-    # there are 3 folders in Database: Train, Val, Test
-    folders = os.listdir(path)
+    folders = os.listdir(path) # there are 3 folders in Database: Train, Val, Test
 
     # iterate in folders
     for folder in folders:
@@ -37,13 +45,17 @@ def prepare_xy_train_val_test_asnumpyarrays():
             filepath = data + "/" + str(file)
             signal = np.loadtxt(filepath)
             label = int((str(file))[5:7])
-            # here was the problem:
-            # returns size = rows*columns. Is this desired?
-            # length = signal.size
-            # instead use "len" attribute
-            # N - overlap = step
-            for i in range(0, len(signal) - N + 1, N - overlap):
+
+            step = N - overlap
+            real_max_value = len(signal) - overlap
+            max_value = int(real_max_value / step) * step # multiples of overlap must fit signal length.
+
+            # Here was a minor bug: windows dimensions not equal to last window dimension for overlap != 25
+            for i in range(0, max_value, step):
                 window = signal[i: (i + N)]
+                window = np.reshape(window, (N * 8))
+                # window = np.reshape(window, (N*8, )) # reshape both hamming if wanted, but does not make improvements
+                # window *= hamming
 
                 if folder == 'Train':
                     x_train.append(window)
@@ -62,27 +74,9 @@ def prepare_xy_train_val_test_asnumpyarrays():
     x_test = np.asanyarray(x_test)
     y_test = np.asanyarray(y_test)
 
-    # reshape x_train, x_val, x_test
-    #x_train = np.reshape(x_train, (int(np.size(x_train) / 400), 400))
-    x_train = np.reshape(x_train, (len(x_train), 400))
-    print(x_train.shape)
-    x_val = np.reshape(x_val, (len(x_val), 400))
-    print(x_val.shape)
-    x_test = np.reshape(x_test, (len(x_test), 400))
-    print(x_test.shape)
-
-    # reshape y_train, y_val, y_test
-    y_train = np.reshape(y_train, (len(y_train), 1))
-    print(y_train.shape)
-    y_val = np.reshape(y_val, (len(y_val), 1))
-    print(y_val.shape)
-    y_test = np.reshape(y_test, (len(y_test), 1))
-    print(y_test.shape)
-
     # make one hot encodings
     y_train = keras.utils.to_categorical(y_train, 13)
     y_val = keras.utils.to_categorical(y_val, 13)
     y_test = keras.utils.to_categorical(y_test, 13)
 
     return x_train, y_train, x_val, y_val, x_test, y_test
-
