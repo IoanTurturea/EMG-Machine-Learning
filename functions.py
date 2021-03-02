@@ -4,13 +4,29 @@ import csv
 import tensorflow as tf
 from tensorflow import keras
 
-# extracts data from files of database
-# located in directory: "/home/ioan/Desktop/Database/"
-# makes a data augmentation by overlapping
-# with a window of size 50%
-
-
 path = "/home/ioan/Desktop/Database/"
+
+
+
+def get_accuracy_from_confusion_matrix(confusion_matrix):
+    acc = 0.0
+    for k in range(confusion_matrix.shape[0]):
+        acc += confusion_matrix[k][k]
+
+    return 100.0*acc/np.sum(confusion_matrix)
+
+
+def create_confusion_matrix(label_test, label_predict):
+    label_test = np.asanyarray(label_test, dtype=int)
+    label_predict = np.asanyarray(label_predict, dtype=int)
+    nr_1 = int(label_test.max() + 1)
+    nr_t = label_test.shape[0]
+    confusion_matrix = np.zeros((nr_1, nr_1), dtype=np.int32)
+    for i in range(nr_t):
+        confusion_matrix[label_test[i]][label_predict[i]] += 1
+
+    return confusion_matrix
+
 
 # extracts data from files of database
 # located in directory: "/home/ioan/Desktop/Database/"
