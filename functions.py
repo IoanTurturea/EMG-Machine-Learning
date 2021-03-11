@@ -178,7 +178,8 @@ def prepare_xy_train_val_test_features():
                 skewness = np.mean(Skewness)
                 iemg = np.mean(IEMG)
                 sampen = np.mean(SampEn)
-                cepstral = np.mean
+                cepstral = np.mean(Cepstral)
+                zxx = np.mean(Zxx)
 
                 #features = namedtuple(MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx)
                 #features = np.array([MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx], dtype=object)
