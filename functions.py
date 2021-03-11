@@ -28,13 +28,8 @@ def create_confusion_matrix(label_test, label_predict):
     return confusion_matrix
 
 
-# extracts data from files of database
-# located in directory: "/home/ioan/Desktop/Database/"
-# makes a data augmentation by overlapping
-# with a window of size 50%
-# returns 6 tensorflow.data.Dataset objects:
+# returns 6 np arrays:
 # x_train, y_train, x_val, y_val, x_test, y_test
-# Obs: val is the same with dev
 def prepare_xy_train_val_test_asnumpyarrays():
     # data base read and format:
     x_train, y_train = [], []
@@ -98,7 +93,9 @@ def prepare_xy_train_val_test_asnumpyarrays():
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 
-def prepare_train_val_test_asDatasets():
+
+# extracts features and returns 6 np arrays
+def prepare_xy_train_val_test_features():
     # data base read and format:
     x_train, y_train = [], []
     x_test, y_test = [], []
@@ -107,8 +104,9 @@ def prepare_train_val_test_asDatasets():
     # window size, choose it to be 50 samples
     # because 50 & 200Hz(sampling rate) = 250ms
     # a sample = one line from a (*,8) matrix
-    N = 50
-    overlap = 40
+    N = 10
+    overlap_procent = 0.5 # input it in range [0,1]
+    overlap = int(N * overlap_procent)
     hamming = np.hamming(N * 8)  # did not improve accuracy :(
     # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
 
@@ -122,28 +120,78 @@ def prepare_train_val_test_asDatasets():
         # iterate files in a folder
         for file in files:
             filepath = data + "/" + str(file)
-            signal = np.loadtxt(filepath)
+            signal2 = np.loadtxt(filepath)
             label = int((str(file))[5:7])
 
             step = N - overlap
-            real_max_value = len(signal) - overlap
+            real_max_value = len(signal2) - overlap
             max_value = int(real_max_value / step) * step  # multiples of overlap must fit signal length.
 
             # Here was a minor bug: windows dimensions not equal to last window dimension for overlap != 25
             for i in range(0, max_value, step):
-                window = signal[i: (i + N)]
-                window = np.reshape(window, (1, N * 8))
+                window = signal2[i: (i + N)]
+                # window = np.reshape(window, (N * 8))
                 # window = np.reshape(window, (N*8, )) # reshape both hamming if wanted, but does not make improvements
                 # window *= hamming
 
+                # calculate features:
+                # time descriptors
+                MAV = 1 / (len(window)) * abs_sum(window)
+                SSC_positions = np.where(np.diff(np.sign(window)))[0]  # position if optional but might use it later
+                SSC = len(SSC_positions) / len(window)  # returns frequnecy of SSC
+                ZCR = ((window[:-1] * window[1:]) < 0).sum()
+                WL = waveform_length(window)
+                Skewness = skew(window)
+                RMS = np.sqrt(np.mean(window ** 2))
+                # Hjorth =
+                IEMG = integratedEMG(window)
+                # Autoregression =
+                SampEn = np.abs(window[2] - window).max(axis=1)  # ?
+                # EMGHist =
+                # frequency descriptors
+                powerspectrum = np.abs(np.fft.fft(window)) ** 2
+                Cepstral = np.fft.ifft(np.log(powerspectrum))
+                # mDWT = nu a mers import pywt(oricum e doar DWT, deci fara 'marginal')
+                # vezi: https://pywavelets.readthedocs.io/en/latest/install.html
+                f, t, Zxx = signal.stft(window, fs=200, nperseg=len(window))(Cepstral)
+                zxx = np.mean(Zxx)
+
+                """
+                - Asa arata dimensiunile fiecarui feature:
+                MAV = ndarray: (8:)
+                SSC = float
+                ZCR = int64
+                WL = ndarray: (8:)
+                Skewness = ndarray: (8:)
+                RMS = float64
+                IEMG = ndarray: (8:)
+                SampEn = ndarray: (10:)
+                Cepstral = ndarray: (10:8)
+                Zxx = ndarray: (10,5,3)
+                - fiindca tipurile sunt diferite am facut media celor caresunt array
+                  ca sa fie toti de tipul floay
+                """
+
+                #make mean where is an array:
+                mav =  np.mean(MAV)
+                wl = np.mean(WL)
+                skewness = np.mean(Skewness)
+                iemg = np.mean(IEMG)
+                sampen = np.mean(SampEn)
+                cepstral = np.mean
+
+                #features = namedtuple(MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx)
+                #features = np.array([MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx], dtype=object)
+                features = np.array([mav, SSC, ZCR, wl, skewness, RMS, iemg, sampen, cepstral, zxx], dtype= float)
+
                 if folder == 'Train':
-                    x_train.append(window)
+                    x_train.append(features)
                     y_train.append(label)
                 elif folder == 'Test':
-                    x_test.append(window)
+                    x_test.append(features)
                     y_test.append(label)
                 elif folder == 'Val':
-                    x_val.append(window)
+                    x_val.append(features)
                     y_val.append(label)
 
     x_train = np.asanyarray(x_train)
@@ -153,19 +201,34 @@ def prepare_train_val_test_asDatasets():
     x_test = np.asanyarray(x_test)
     y_test = np.asanyarray(y_test)
 
-    # reshape y's:
-    y_train = np.reshape(y_train, (len(y_train), 1, 1))
-    y_val = np.reshape(y_train, (len(y_val), 1, 1))
-    y_test = np.reshape(y_train, (len(y_test), 1, 1))
-
     # make one hot encodings
     y_train = keras.utils.to_categorical(y_train, 13)
     y_val = keras.utils.to_categorical(y_val, 13)
     y_test = keras.utils.to_categorical(y_test, 13)
 
-    train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
-    val_dataset = tf.data.Dataset.from_tensor_slices((x_val, y_val))
-    test_dataset = tf.data.Dataset.from_tensor_slices((x_test, y_test))
+    return x_train, y_train, x_val, y_val, x_test, y_test
 
-    return train_dataset, val_dataset, test_dataset
+
+# helper functions:
+
+def abs_sum(arr):
+    suma = 0
+    for i in arr:
+        suma += i
+    return suma
+
+
+def waveform_length(arr):
+    suma = 0
+    for i in range(1, len(arr)):
+        suma += abs(arr[i] - arr[i - 1])
+    return suma
+
+
+def integratedEMG(arr):
+    suma = 0
+    for i in range(1, len(arr)):
+        suma += abs(arr[i])
+    return suma
+
 
