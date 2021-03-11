@@ -154,7 +154,6 @@ def prepare_xy_train_val_test_features():
                 # mDWT = nu a mers import pywt(oricum e doar DWT, deci fara 'marginal')
                 # vezi: https://pywavelets.readthedocs.io/en/latest/install.html
                 f, t, Zxx = signal.stft(window, fs=200, nperseg=len(window))(Cepstral)
-                zxx = np.mean(Zxx)
 
                 """
                 - Asa arata dimensiunile fiecarui feature:
