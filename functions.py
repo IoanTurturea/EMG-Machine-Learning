@@ -104,10 +104,10 @@ def prepare_xy_train_val_test_features():
     # window size, choose it to be 50 samples
     # because 50 & 200Hz(sampling rate) = 250ms
     # a sample = one line from a (*,8) matrix
-    N = 10
-    overlap_procent = 0.5 # input it in range [0,1]
+    N = 50
+    overlap_procent = 0 # input it in range [0,1]
     overlap = int(N * overlap_procent)
-    hamming = np.hamming(N * 8)  # did not improve accuracy :(
+    # hamming = np.hamming(N * 8)  # did not improve accuracy :(
     # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
 
     folders = os.listdir(path)  # 3 folders in Database: Train, Val, Test
@@ -150,11 +150,10 @@ def prepare_xy_train_val_test_features():
                 # EMGHist =
                 # frequency descriptors
                 powerspectrum = np.abs(np.fft.fft(window)) ** 2
-                Cepstral = np.fft.ifft(np.log(powerspectrum))
+                # Cepstral = np.fft.ifft(np.log(powerspectrum))
                 # mDWT = nu a mers import pywt(oricum e doar DWT, deci fara 'marginal')
                 # vezi: https://pywavelets.readthedocs.io/en/latest/install.html
-                f, t, Zxx = signal.stft(window, fs=200, nperseg=len(window))(Cepstral)
-
+                # f, t, Zxx = signal.stft(window, fs=200, nperseg=len(window))
                 """
                 - Asa arata dimensiunile fiecarui feature:
                 MAV = ndarray: (8:)
@@ -165,10 +164,10 @@ def prepare_xy_train_val_test_features():
                 RMS = float64
                 IEMG = ndarray: (8:)
                 SampEn = ndarray: (10:)
-                Cepstral = ndarray: (10:8)
+                Cepstral = ndarray: (10:8) - numere imaginare
                 Zxx = ndarray: (10,5,3)
-                - fiindca tipurile sunt diferite am facut media celor caresunt array
-                  ca sa fie toti de tipul floay
+                - fiindca tipurile sunt diferite am facut media celor care sunt array
+                  ca sa fie toti de tipul float
                 """
 
                 #make mean where is an array:
@@ -177,12 +176,12 @@ def prepare_xy_train_val_test_features():
                 skewness = np.mean(Skewness)
                 iemg = np.mean(IEMG)
                 sampen = np.mean(SampEn)
-                cepstral = np.mean(Cepstral)
-                zxx = np.mean(Zxx)
+                #cepstral = np.abs(np.mean(Cepstral))
+                #zxx = np.mean(Zxx)
 
                 #features = namedtuple(MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx)
                 #features = np.array([MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx], dtype=object)
-                features = np.array([mav, SSC, ZCR, wl, skewness, RMS, iemg, sampen, cepstral, zxx], dtype= float)
+                features = np.array([mav, SSC, ZCR, wl, skewness, RMS, iemg, sampen])
 
                 if folder == 'Train':
                     x_train.append(features)
@@ -207,6 +206,7 @@ def prepare_xy_train_val_test_features():
     y_test = keras.utils.to_categorical(y_test, 13)
 
     return x_train, y_train, x_val, y_val, x_test, y_test
+
 
 
 # helper functions:
