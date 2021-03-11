@@ -93,7 +93,6 @@ def prepare_xy_train_val_test_asnumpyarrays():
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 
-
 # extracts features and returns 6 np arrays
 def prepare_xy_train_val_test_features():
     # data base read and format:
@@ -206,6 +205,7 @@ def prepare_xy_train_val_test_features():
     y_test = keras.utils.to_categorical(y_test, 13)
 
     return x_train, y_train, x_val, y_val, x_test, y_test
+
 
 
 
