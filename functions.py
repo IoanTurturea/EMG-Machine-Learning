@@ -93,7 +93,7 @@ def prepare_xy_train_val_test_asnumpyarrays():
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 
-# extracts features and returns 6 np arrays
+# extracts features and returns 6 numpy arrays
 def prepare_xy_train_val_test_features():
     # data base read and format:
     x_train, y_train = [], []
@@ -104,7 +104,7 @@ def prepare_xy_train_val_test_features():
     # because 50 & 200Hz(sampling rate) = 250ms
     # a sample = one line from a (*,8) matrix
     N = 50
-    overlap_procent = 0 # input it in range [0,1]
+    overlap_procent = 0.5 # input it in range [0,1]
     overlap = int(N * overlap_procent)
     # hamming = np.hamming(N * 8)  # did not improve accuracy :(
     # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
@@ -119,7 +119,7 @@ def prepare_xy_train_val_test_features():
         # iterate files in a folder
         for file in files:
             filepath = data + "/" + str(file)
-            signal2 = np.loadtxt(filepath)
+            signal2 = np.loadtxt(filepath) # renamed it 'signal2'. because in a library exists 'signal' function
             label = int((str(file))[5:7])
 
             step = N - overlap
@@ -132,24 +132,30 @@ def prepare_xy_train_val_test_features():
                 # window = np.reshape(window, (N * 8))
                 # window = np.reshape(window, (N*8, )) # reshape both hamming if wanted, but does not make improvements
                 # window *= hamming
+                # rehsape it (1, 400)
+                window = np.reshape(window, (1, N*8))
 
                 # calculate features:
+                
                 # time descriptors
-                MAV = 1 / (len(window)) * abs_sum(window)
-                SSC_positions = np.where(np.diff(np.sign(window)))[0]  # position if optional but might use it later
-                SSC = len(SSC_positions) / len(window)  # returns frequnecy of SSC
-                ZCR = ((window[:-1] * window[1:]) < 0).sum()
+                MAV = (1 / len(window)) * abs_sum(window)
+                #SSC_positions = np.where(np.diff(np.sign(window)))[0]  # position is optional but might use it later
+                SSC_positions = np.nonzero(np.diff(window > 0))[0]
+                SSC = SSC_positions.size / window.size  # returns frequnecy of SSC, not sure this is correct
+                ZCR = SSC_positions.size
                 WL = waveform_length(window)
-                Skewness = skew(window)
+                Skewness = skew(window) # normal da 0, anormal este != 0
                 RMS = np.sqrt(np.mean(window ** 2))
-                # Hjorth =
+                # Hjorth = ?
                 IEMG = integratedEMG(window)
-                # Autoregression =
-                SampEn = np.abs(window[2] - window).max(axis=1)  # ?
-                # EMGHist =
+                # Autoregression = ?
+                # SampEn = sampen.sampen2(window) # vezi: https://pypi.org/project/sampen/
+                # EMGHist = ?
+                a = 1
+
                 # frequency descriptors
-                powerspectrum = np.abs(np.fft.fft(window)) ** 2
-                # Cepstral = np.fft.ifft(np.log(powerspectrum))
+                # powerspectrum = np.abs(np.fft.fft(window)) ** 2
+                # Cepstral = np.fft.ifft(np.log(powerspectrum)) # vezi: https://dsp.stackexchange.com/questions/48886/formula-to-calculate-cepstral-coefficients-not-mfcc
                 # mDWT = nu a mers import pywt(oricum e doar DWT, deci fara 'marginal')
                 # vezi: https://pywavelets.readthedocs.io/en/latest/install.html
                 # f, t, Zxx = signal.stft(window, fs=200, nperseg=len(window))
@@ -167,6 +173,8 @@ def prepare_xy_train_val_test_features():
                 Zxx = ndarray: (10,5,3)
                 - fiindca tipurile sunt diferite am facut media celor care sunt array
                   ca sa fie toti de tipul float
+                - obs: elementele care au dim: (8:0) aplica operatia aceea pe lungimea N a ferestrei.
+                  Nu stiu data trebuie aplicata pe lungimea N, sau pe nr. de coloane = 8.
                 """
 
                 #make mean where is an array:
@@ -174,13 +182,13 @@ def prepare_xy_train_val_test_features():
                 wl = np.mean(WL)
                 skewness = np.mean(Skewness)
                 iemg = np.mean(IEMG)
-                sampen = np.mean(SampEn)
+                #sampen = np.mean(SampEn)
                 #cepstral = np.abs(np.mean(Cepstral))
                 #zxx = np.mean(Zxx)
 
                 #features = namedtuple(MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx)
                 #features = np.array([MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx], dtype=object)
-                features = np.array([mav, SSC, ZCR, wl, skewness, RMS, iemg, sampen])
+                features = np.array([mav, SSC, ZCR, wl, skewness, RMS, iemg], dtype = float)
 
                 if folder == 'Train':
                     x_train.append(features)
@@ -207,10 +215,7 @@ def prepare_xy_train_val_test_features():
     return x_train, y_train, x_val, y_val, x_test, y_test
 
 
-
-
 # helper functions:
-
 def abs_sum(arr):
     suma = 0
     for i in arr:
@@ -220,15 +225,16 @@ def abs_sum(arr):
 
 def waveform_length(arr):
     suma = 0
-    for i in range(1, len(arr)):
+    arr = arr.reshape(arr.size) # make it flat
+    for i in range(1, arr.size):
         suma += abs(arr[i] - arr[i - 1])
     return suma
 
 
 def integratedEMG(arr):
     suma = 0
-    for i in range(1, len(arr)):
+    arr = arr.reshape(arr.size)  # make it flat
+    for i in range(1, arr.size):
         suma += abs(arr[i])
     return suma
-
 
