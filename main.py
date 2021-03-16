@@ -12,11 +12,9 @@ from tensorflow.keras.utils import plot_model
 
 print("TF version:", tf.__version__)
 
-x_train, y_train, x_dev, y_dev, x_test, y_test = prepare_xy_train_val_test_asnumpyarrays()  # returns numpy arrays
-#train_dataset = tf.data.Dataset.zip((x_train, y_train))
-#train_dataset = tf.data.Dataset.from_tensor_slices((x_train, y_train))
+x_train, y_train, x_dev, y_dev, x_test, y_test = extract_features_from_channel()
 
-input = Input((400,), name='input')
+input = Input((64,), name='input')
 hidden = Dense(64, activation='relu', name='hidden_1')(input)
 dropout = Dropout(0.2, name='dropout_1')(hidden)
 hidden = Dense(64, activation='relu', name='hidden_2')(dropout)
@@ -29,7 +27,7 @@ output = Dense(13, activation='softmax', name='output')(dropout)
 model = Model(inputs=input, outputs=output)
 model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
 
-#model = load_model('1.h5')
+# model = load_model('1.h5')
 
 accuracy = model.fit(x = x_train, y = y_train, callbacks=[ModelCheckpoint('1.h5', save_best_only=True, verbose=1)],
                      batch_size=64, epochs = 1024, verbose=2, validation_data=(x_dev, y_dev))
