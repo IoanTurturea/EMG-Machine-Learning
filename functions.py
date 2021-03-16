@@ -28,73 +28,8 @@ def create_confusion_matrix(label_test, label_predict):
     return confusion_matrix
 
 
-# returns 6 np arrays:
-# x_train, y_train, x_val, y_val, x_test, y_test
-def prepare_xy_train_val_test_asnumpyarrays():
-    # data base read and format:
-    x_train, y_train = [], []
-    x_test, y_test = [], []
-    x_val, y_val = [], []
-
-    # window size, choose it to be 50 samples
-    # because 50 & 200Hz(sampling rate) = 250ms
-    # a sample = one line from a (*,8) matrix
-    N = 50
-    overlap = 40
-    hamming = np.hamming(N*8) # did not improve accuracy :(
-    # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
-
-    folders = os.listdir(path) # there are 3 folders in Database: Train, Val, Test
-
-    # iterate in folders
-    for folder in folders:
-        data = os.path.join(path, folder)
-        files = os.listdir(data)
-
-        # iterate files in a folder
-        for file in files:
-            filepath = data + "/" + str(file)
-            signal = np.loadtxt(filepath)
-            label = int((str(file))[5:7])
-
-            step = N - overlap
-            real_max_value = len(signal) - overlap
-            max_value = int(real_max_value / step) * step # multiples of overlap must fit signal length.
-
-            # Here was a minor bug: windows dimensions not equal to last window dimension for overlap != 25
-            for i in range(0, max_value, step):
-                window = signal[i: (i + N)]
-                window = np.reshape(window, (N * 8))
-                # window = np.reshape(window, (N*8, )) # reshape both hamming if wanted, but does not make improvements
-                # window *= hamming
-
-                if folder == 'Train':
-                    x_train.append(window)
-                    y_train.append(label)
-                elif folder == 'Test':
-                    x_test.append(window)
-                    y_test.append(label)
-                elif folder == 'Val':
-                    x_val.append(window)
-                    y_val.append(label)
-
-    x_train = np.asanyarray(x_train)
-    y_train = np.asanyarray(y_train)
-    x_val = np.asanyarray(x_val)
-    y_val = np.asanyarray(y_val)
-    x_test = np.asanyarray(x_test)
-    y_test = np.asanyarray(y_test)
-
-    # make one hot encodings
-    y_train = keras.utils.to_categorical(y_train, 13)
-    y_val = keras.utils.to_categorical(y_val, 13)
-    y_test = keras.utils.to_categorical(y_test, 13)
-
-    return x_train, y_train, x_val, y_val, x_test, y_test
-
-
 # extracts features and returns 6 numpy arrays
-def prepare_xy_train_val_test_features():
+def extract_features_from_channel():
     # data base read and format:
     x_train, y_train = [], []
     x_test, y_test = [], []
@@ -106,8 +41,6 @@ def prepare_xy_train_val_test_features():
     N = 50
     overlap_procent = 0.5 # input it in range [0,1]
     overlap = int(N * overlap_procent)
-    # hamming = np.hamming(N * 8)  # did not improve accuracy :(
-    # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
 
     folders = os.listdir(path)  # 3 folders in Database: Train, Val, Test
 
@@ -129,67 +62,49 @@ def prepare_xy_train_val_test_features():
             # Here was a minor bug: windows dimensions not equal to last window dimension for overlap != 25
             for i in range(0, max_value, step):
                 window = signal2[i: (i + N)]
-                # window = np.reshape(window, (N * 8))
-                # window = np.reshape(window, (N*8, )) # reshape both hamming if wanted, but does not make improvements
-                # window *= hamming
-                # rehsape it (1, 400)
-                window = np.reshape(window, (1, N*8))
+                features = []
 
-                # calculate features:
-                
-                # time descriptors
-                MAV = (1 / len(window)) * abs_sum(window)
-                #SSC_positions = np.where(np.diff(np.sign(window)))[0]  # position is optional but might use it later
-                SSC_positions = np.nonzero(np.diff(window > 0))[0]
-                SSC = SSC_positions.size / window.size  # returns frequnecy of SSC, not sure this is correct
-                ZCR = SSC_positions.size
-                WL = waveform_length(window)
-                Skewness = skew(window) # normal da 0, anormal este != 0
-                RMS = np.sqrt(np.mean(window ** 2))
-                # Hjorth = ?
-                IEMG = integratedEMG(window)
-                # Autoregression = ?
-                # SampEn = sampen.sampen2(window) # vezi: https://pypi.org/project/sampen/
-                # EMGHist = ?
-                a = 1
+                # calculate features for each channel and append them
+                for nr_of_channels in range(0, window.shape[1]):
+                    channel = window[:, nr_of_channels]
+                    channel = np.reshape(channel, (1, N))
 
-                # frequency descriptors
-                # powerspectrum = np.abs(np.fft.fft(window)) ** 2
-                # Cepstral = np.fft.ifft(np.log(powerspectrum)) # vezi: https://dsp.stackexchange.com/questions/48886/formula-to-calculate-cepstral-coefficients-not-mfcc
-                # mDWT = nu a mers import pywt(oricum e doar DWT, deci fara 'marginal')
-                # vezi: https://pywavelets.readthedocs.io/en/latest/install.html
-                # f, t, Zxx = signal.stft(window, fs=200, nperseg=len(window))
-                """
-                - Asa arata dimensiunile fiecarui feature:
-                MAV = ndarray: (8:)
-                SSC = float
-                ZCR = int64
-                WL = ndarray: (8:)
-                Skewness = ndarray: (8:)
-                RMS = float64
-                IEMG = ndarray: (8:)
-                SampEn = ndarray: (10:)
-                Cepstral = ndarray: (10:8) - numere imaginare
-                Zxx = ndarray: (10,5,3)
-                - fiindca tipurile sunt diferite am facut media celor care sunt array
-                  ca sa fie toti de tipul float
-                - obs: elementele care au dim: (8:0) aplica operatia aceea pe lungimea N a ferestrei.
-                  Nu stiu data trebuie aplicata pe lungimea N, sau pe nr. de coloane = 8.
-                """
+                    # calculate features:
 
-                #make mean where is an array:
-                mav =  np.mean(MAV)
-                wl = np.mean(WL)
-                skewness = np.mean(Skewness)
-                iemg = np.mean(IEMG)
-                #sampen = np.mean(SampEn)
-                #cepstral = np.abs(np.mean(Cepstral))
-                #zxx = np.mean(Zxx)
+                    # time descriptors
+                    MAV = (1 / len(channel)) * abs_sum(channel)
+                    SSC_positions = np.nonzero(np.diff(channel > 0))[0]
+                    SSC = SSC_positions.size / channel.size  # returns frequnecy of SSC, not sure this is correct
+                    ZCR = SSC_positions.size
+                    WL = waveform_length(channel)
+                    Skewness = skew(channel) # normal da 0, anormal este != 0
+                    RMS = np.sqrt(np.mean(channel ** 2))
+                    # Hjorth = ?
+                    IEMG = integratedEMG(channel)
+                    # Autoregression = ?
+                    # SampEn = sampen.sampen2(channel) # vezi: https://pypi.org/project/sampen/
+                    # EMGHist = ?
 
-                #features = namedtuple(MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx)
-                #features = np.array([MAV, SSC, ZCR, WL, Skewness, RMS, IEMG, SampEn, Cepstral, Zxx], dtype=object)
-                features = np.array([mav, SSC, ZCR, wl, skewness, RMS, iemg], dtype = float)
+                    # frequency descriptors
+                    powerspectrum = np.abs(np.fft.fft(channel)) ** 2
+                    powerspectrum[np.where(powerspectrum == 0)] = 10**-10 # pt ca: RuntimeWarning: divide by zero encountered in log
+                    Cepstral = np.fft.ifft(np.log(powerspectrum)) # vezi: https://dsp.stackexchange.com/questions/48886/formula-to-calculate-cepstral-coefficients-not-mfcc
+                    # mDWT = nu a mers import pywt(oricum e doar DWT, deci fara 'marginal')
+                    # vezi: https://pywavelets.readthedocs.io/en/latest/install.html
+                    f, t, Zxx = signal.stft(channel, fs=200, nperseg=len(channel))
 
+                    #make mean where is an array:
+                    mav =  np.mean(MAV)
+                    skewness = np.mean(Skewness)
+                    # sampen = np.mean(SampEn)
+                    cepstral = np.mean(np.abs(Cepstral))
+                    zxx = np.mean(np.abs(Zxx))
+
+                    features.append(np.array([mav, SSC, ZCR, WL, RMS, IEMG, cepstral, zxx], dtype = float))
+                    # obs: Skewness era mereu 0(ceea ce e bine), asa ca l-am scos ca nu oferea informatii si ca sa am 8 descriptori
+
+                features = np.asanyarray(features)
+                features = np.reshape(features, (window.shape[1] * features[0].size))
                 if folder == 'Train':
                     x_train.append(features)
                     y_train.append(label)
