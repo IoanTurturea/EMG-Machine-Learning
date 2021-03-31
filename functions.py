@@ -31,22 +31,52 @@ def create_confusion_matrix(label_test, label_predict):
 # returns 6 np arrays:
 # x_train, y_train, x_val, y_val, x_test, y_test
 # Obs: val is the same with dev
-def prepare_xy_train_val_test_asnumpyarrays():
+def prepare_xy_train_val_test_asnumpyarrays2():
     # data base read and format:
     x_train, y_train = [], []
     x_test, y_test = [], []
     x_val, y_val = [], []
 
+    path_load = "/home/ioan/Desktop/Database/Train"
+    path_save = "/home/ioan/Desktop/"
+
     # window size, choose it to be 50 samples
     # because 50 & 200Hz(sampling rate) = 250ms
     # a sample = one line from a (*,8) matrix
     N = 50
-    overlap_procent = 0.5
+    overlap_procent = 0.5 # interval [0:1]
     overlap = int(N * overlap_procent)
     hamming = np.hamming(N * 8)  # did not improve accuracy :(
     # hamming = np.reshape(hamming, (N*8, )) # reshape both window if wanted, but does not make improvements
 
-    folders = os.listdir(path)  # 3 folders in Database: Train, Val, Test
+    # create train, test, val directories:
+    path_database = os.path.join(path_save, 'Split_database')
+    path_train = os.path.join(path_database, 'Train')
+    path_test = os.path.join(path_database, 'Test')
+    path_val = os.path.join(path_database, 'Val')
+
+    if not os.path.exists(path_database):
+        os.makedirs(path_database)
+    if not os.path.exists(path_train):
+        os.makedirs(path_train)
+    if not os.path.exists(path_test):
+        os.makedirs(path_test)
+    if not os.path.exists(path_val):
+        os.makedirs(path_val)
+
+    # populate train, test, val directories:
+    raw_files = sorted(os.listdir(path_load))
+    for raw_file in raw_files:
+        file_name = int((str(raw_file))[0:4]) # first 4 digits are user id
+        file_path = os.path.join(path_load, raw_file)
+        if file_name <= 3:
+            shutil.copy(file_path, path_test)
+        elif 3 < file_name <= 11:
+            shutil.copy(file_path, path_val)
+        else:
+            shutil.copy(file_path, path_train)
+
+    folders = os.listdir(path_database)  # 3 folders in Database: Train, Val, Test
 
     # iterate in folders
     for folder in folders:
